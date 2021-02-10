@@ -199,8 +199,16 @@ func main() {
 	type cylinder struct {
 		side, top, bottom []vertex
 	}
-	side, top, bottom := getCylinderVertices(4, 1, 16)
+	side, top, bottom := getCylinderVertices(0.2, 1.25, 16)
 	var cylinders []cylinder
+	cylinders = append(cylinders, cylinder{side, top, bottom})
+	side, top, bottom = getCylinderVertices(0.3, 0.4, 16)
+	cylinders = append(cylinders, cylinder{side, top, bottom})
+	side, top, bottom = getCylinderVertices(2, 0.1, 6)
+	cylinders = append(cylinders, cylinder{side, top, bottom})
+	side, top, bottom = getCylinderVertices(2.5, 0.1, 6)
+	cylinders = append(cylinders, cylinder{side, top, bottom})
+	side, top, bottom = getCylinderVertices(0.3, 0.25, 16)
 	cylinders = append(cylinders, cylinder{side, top, bottom})
 
 	for !window.ShouldClose() {
@@ -211,9 +219,61 @@ func main() {
 		elapsed := time - previousTime
 		previousTime = time
 		angle += elapsed
-		model = mgl32.HomogRotate3D(float32(angle), mgl32.Vec3{0, 1, 0})
+		model = mgl32.HomogRotate3D(float32(angle), mgl32.Vec3{0, 1, 0}).Mul4(mgl32.Translate3D(-2, 0, 0)).Mul4(mgl32.HomogRotate3DZ(float32(angle) * 2))
 		gl.UniformMatrix4fv(modelUniform, 1, false, &model[0])
 		drawCylinder(cylinders[0].side, cylinders[0].top, cylinders[0].bottom)
+
+		model = mgl32.HomogRotate3D(float32(angle), mgl32.Vec3{0, 1, 0}).Mul4(mgl32.Translate3D(2, 0, 0)).Mul4(mgl32.HomogRotate3DZ(float32(angle) * 2))
+		gl.UniformMatrix4fv(modelUniform, 1, false, &model[0])
+		drawCylinder(cylinders[0].side, cylinders[0].top, cylinders[0].bottom)
+
+		model = mgl32.HomogRotate3D(float32(angle), mgl32.Vec3{0, 1, 0}).Mul4(mgl32.HomogRotate3DZ(float32(angle)))
+		gl.UniformMatrix4fv(modelUniform, 1, false, &model[0])
+		drawCylinder(cylinders[1].side, cylinders[1].top, cylinders[1].bottom)
+
+		model = mgl32.HomogRotate3D(float32(angle), mgl32.Vec3{0, 1, 0}).Mul4(mgl32.HomogRotate3DY(math32.Pi / 2)).Mul4(mgl32.Translate3D(0, 0, 1))
+		gl.UniformMatrix4fv(modelUniform, 1, false, &model[0])
+		drawCylinder(cylinders[2].side, cylinders[2].top, cylinders[2].bottom)
+
+		model = mgl32.HomogRotate3D(float32(angle), mgl32.Vec3{0, 1, 0}).Mul4(mgl32.HomogRotate3DY(math32.Pi / 2)).Mul4(mgl32.HomogRotate3DX(2 * math32.Pi / 3)).Mul4(mgl32.Translate3D(0, 0, -1.25))
+		gl.UniformMatrix4fv(modelUniform, 1, false, &model[0])
+		drawCylinder(cylinders[3].side, cylinders[3].top, cylinders[3].bottom)
+
+		model = mgl32.HomogRotate3D(float32(angle), mgl32.Vec3{0, 1, 0}).Mul4(mgl32.HomogRotate3DY(math32.Pi / 2)).Mul4(mgl32.HomogRotate3DX(2 * math32.Pi / 3)).Mul4(mgl32.Translate3D(0, -1.75, -0.25))
+		gl.UniformMatrix4fv(modelUniform, 1, false, &model[0])
+		drawCylinder(cylinders[3].side, cylinders[3].top, cylinders[3].bottom)
+
+		model = mgl32.HomogRotate3D(float32(angle), mgl32.Vec3{0, 1, 0}).Mul4(mgl32.HomogRotate3DY(math32.Pi / 2)).Mul4(mgl32.HomogRotate3DX(2 * math32.Pi / 7)).Mul4(mgl32.Translate3D(0, 0, -0.85))
+		gl.UniformMatrix4fv(modelUniform, 1, false, &model[0])
+		drawCylinder(cylinders[2].side, cylinders[2].top, cylinders[2].bottom)
+
+		model = mgl32.HomogRotate3D(float32(angle), mgl32.Vec3{0, 1, 0}).Mul4(mgl32.HomogRotate3DY(math32.Pi / 2)).Mul4(mgl32.HomogRotate3DX(math32.Pi / 3)).Mul4(mgl32.Translate3D(0, 1.75, 0))
+		gl.UniformMatrix4fv(modelUniform, 1, false, &model[0])
+		drawCylinder(cylinders[2].side, cylinders[2].top, cylinders[2].bottom)
+
+		model = mgl32.HomogRotate3D(float32(angle), mgl32.Vec3{0, 1, 0}).Mul4(mgl32.HomogRotate3DY(math32.Pi / 2)).Mul4(mgl32.Translate3D(0, 1.75, 0))
+		gl.UniformMatrix4fv(modelUniform, 1, false, &model[0])
+		drawCylinder(cylinders[2].side, cylinders[2].top, cylinders[2].bottom)
+
+		model = mgl32.HomogRotate3D(float32(angle), mgl32.Vec3{0, 1, 0}).Mul4(mgl32.Translate3D(-0.75, 2.2, 0))
+		gl.UniformMatrix4fv(modelUniform, 1, false, &model[0])
+		drawCylinder(cylinders[2].side, cylinders[2].top, cylinders[2].bottom)
+
+		model = mgl32.HomogRotate3D(float32(angle), mgl32.Vec3{0, 1, 0}).Mul4(mgl32.HomogRotate3DX(math32.Pi / 2)).Mul4(mgl32.Translate3D(1.25, 0, -2.1))
+		gl.UniformMatrix4fv(modelUniform, 1, false, &model[0])
+		drawCylinder(cylinders[1].side, cylinders[1].top, cylinders[1].bottom)
+
+		model = mgl32.HomogRotate3D(float32(angle), mgl32.Vec3{0, 1, 0}).Mul4(mgl32.HomogRotate3DX(math32.Pi / 2)).Mul4(mgl32.Translate3D(0.85, 0, -2.1))
+		gl.UniformMatrix4fv(modelUniform, 1, false, &model[0])
+		drawCylinder(cylinders[4].side, cylinders[4].top, cylinders[4].bottom)
+
+		model = mgl32.HomogRotate3D(float32(angle), mgl32.Vec3{0, 1, 0}).Mul4(mgl32.Translate3D(-2, 0, 0))
+		gl.UniformMatrix4fv(modelUniform, 1, false, &model[0])
+		drawCylinder(cylinders[4].side, cylinders[4].top, cylinders[4].bottom)
+
+		model = mgl32.HomogRotate3D(float32(angle), mgl32.Vec3{0, 1, 0}).Mul4(mgl32.Translate3D(2, 0, 0))
+		gl.UniformMatrix4fv(modelUniform, 1, false, &model[0])
+		drawCylinder(cylinders[4].side, cylinders[4].top, cylinders[4].bottom)
 
 		// update events
 		glfw.PollEvents()
