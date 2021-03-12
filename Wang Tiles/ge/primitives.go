@@ -183,31 +183,7 @@ func GetCubicHexahedronTextureCoords(X, Y, Z float32) []mgl32.Vec2 {
 	return vertices
 }
 
-//GetPlaneVertices3 ...
-func GetPlaneVertices3(h int, w int, l int) []mgl32.Vec3 {
-	var vertices []mgl32.Vec3
-	var i = -1
-	for row := -h / 2; row < h/2; row += l {
-		i *= -1
-		for col := -w / 2; col <= w/2; col += l {
-			vertices = append(vertices, mgl32.Vec3{float32(col * i), 0, float32(row)})
-			vertices = append(vertices, mgl32.Vec3{float32(col * i), 0, float32(row + l)})
-		}
-	}
-	return vertices
-}
-
-//GetPlaneTextureCoords ...
-func GetPlaneTextureCoords(h int, w int, l int) (vertices []mgl32.Vec2) {
-	planeVertices := GetPlaneVertices3(h, w, l)
-	for _, v := range planeVertices {
-		//x := (i / 2) % (w + 1)
-		//y := (i / (2 * (h + 1))) + i%2
-		vertices = append(vertices, mgl32.Vec2{(v.X() + float32(w)/2) / float32(w), (v.Z() + float32(h)/2) / float32(h)})
-	}
-	return
-}
-
+//GetSquare ...
 func GetSquare(hTiles int, vTiles int, tileLengths float32) (vertices []mgl32.Vec3, tCoords []mgl32.Vec2, indices []uint32) {
 	vOfset := (float32(vTiles) * tileLengths) / 2
 	hOfset := (float32(hTiles) * tileLengths) / 2
@@ -223,15 +199,18 @@ func GetSquare(hTiles int, vTiles int, tileLengths float32) (vertices []mgl32.Ve
 	return
 }
 
+//GetSquareRepeat ...
 func GetSquareRepeat(hTiles int, vTiles int, tileLengths float32) (vertices []mgl32.Vec3, tCoords []mgl32.Vec2, indices []uint32) {
 	vOfset := (float32(vTiles) * tileLengths) / 2
 	hOfset := (float32(hTiles) * tileLengths) / 2
 	for v := 0; v < vTiles; v++ {
 		for h := 0; h < hTiles; h++ {
-			vertices = append(vertices, mgl32.Vec3{(float32(h) * tileLengths) - hOfset, 0, (float32(v) * tileLengths) - vOfset})
-			vertices = append(vertices, mgl32.Vec3{(float32(h) * tileLengths) - hOfset, 0, (float32(v+1) * tileLengths) - vOfset})
-			vertices = append(vertices, mgl32.Vec3{(float32(h+1) * tileLengths) - hOfset, 0, (float32(v) * tileLengths) - vOfset})
-			vertices = append(vertices, mgl32.Vec3{(float32(h+1) * tileLengths) - hOfset, 0, (float32(v+1) * tileLengths) - vOfset})
+			vertices = append(vertices, []mgl32.Vec3{
+				{(float32(h) * tileLengths) - hOfset, 0, (float32(v) * tileLengths) - vOfset},
+				{(float32(h) * tileLengths) - hOfset, 0, (float32(v+1) * tileLengths) - vOfset},
+				{(float32(h+1) * tileLengths) - hOfset, 0, (float32(v) * tileLengths) - vOfset},
+				{(float32(h+1) * tileLengths) - hOfset, 0, (float32(v+1) * tileLengths) - vOfset},
+			}...)
 			tCoords = append(tCoords, []mgl32.Vec2{{0, 0}, {0, 1}, {1, 0}, {1, 1}}...)
 			indices = append(indices, []uint32{uint32(4*h + hTiles*4*v), uint32(4*h + hTiles*4*v + 1), uint32(4*h + hTiles*4*v + 2), uint32(4*h + hTiles*4*v + 3), uint32(4*h + hTiles*4*v + 2), uint32(4*h + hTiles*4*v + 1)}...)
 		}
@@ -239,66 +218,64 @@ func GetSquareRepeat(hTiles int, vTiles int, tileLengths float32) (vertices []mg
 	return
 }
 
+//GetSquareWangTiles ...
 func GetSquareWangTiles(hTiles int, vTiles int, tileLengths float32, tileCords [][]mgl32.Vec2, adjacencyList [][][]int) (vertices []mgl32.Vec3, tCoords []mgl32.Vec2, indices []uint32) {
 	rand.Seed(time.Now().UnixNano())
 	vOfset := (float32(vTiles) * tileLengths) / 2
 	hOfset := (float32(hTiles) * tileLengths) / 2
-	WangTilesMatrix := [][]int{}
+
 	possibilities := [][][]int{}
-	aux := 0
-	all := []int{}
 	for v := 0; v < vTiles; v++ {
-		WangTilesMatrix = append(WangTilesMatrix, []int{})
 		possibilities = append(possibilities, [][]int{})
 		for h := 0; h < hTiles; h++ {
-			WangTilesMatrix[v] = append(WangTilesMatrix[v], -1)
-			possibilities[v] = append(possibilities[v], []int{-1})
-			all = append(all, aux)
+			possibilities[v] = append(possibilities[v], []int{})
 		}
-		aux++
+	}
+
+	all := []int{}
+	for i := range tileCords {
+		all = append(all, i)
 	}
 	possibilities[0][0] = all
+
 	for v := 0; v < vTiles; v++ {
 		for h := 0; h < hTiles; h++ {
-			vertices = append(vertices, mgl32.Vec3{(float32(h) * tileLengths) - hOfset, 0, (float32(v) * tileLengths) - vOfset})
-			vertices = append(vertices, mgl32.Vec3{(float32(h) * tileLengths) - hOfset, 0, (float32(v+1) * tileLengths) - vOfset})
-			vertices = append(vertices, mgl32.Vec3{(float32(h+1) * tileLengths) - hOfset, 0, (float32(v) * tileLengths) - vOfset})
-			vertices = append(vertices, mgl32.Vec3{(float32(h+1) * tileLengths) - hOfset, 0, (float32(v+1) * tileLengths) - vOfset})
-			indices = append(indices, []uint32{uint32(4*h + hTiles*4*v), uint32(4*h + hTiles*4*v + 1), uint32(4*h + hTiles*4*v + 2), uint32(4*h + hTiles*4*v + 3), uint32(4*h + hTiles*4*v + 2), uint32(4*h + hTiles*4*v + 1)}...)
+			vertices = append(vertices, []mgl32.Vec3{
+				{(float32(h) * tileLengths) - hOfset, 0, (float32(v) * tileLengths) - vOfset},
+				{(float32(h) * tileLengths) - hOfset, 0, (float32(v+1) * tileLengths) - vOfset},
+				{(float32(h+1) * tileLengths) - hOfset, 0, (float32(v) * tileLengths) - vOfset},
+				{(float32(h+1) * tileLengths) - hOfset, 0, (float32(v+1) * tileLengths) - vOfset},
+			}...)
+			firstIndex := 4 * (h + v*hTiles)
+			indices = append(indices, []uint32{
+				uint32(firstIndex),
+				uint32(firstIndex + 1),
+				uint32(firstIndex + 2),
+				uint32(firstIndex + 3),
+				uint32(firstIndex + 2),
+				uint32(firstIndex + 1),
+			}...)
 
 			currentPossibilities := possibilities[h][v]
-			WangTilesMatrix[h][v] = currentPossibilities[rand.Intn(len(currentPossibilities))]
+			currentTile := currentPossibilities[rand.Intn(len(currentPossibilities))]
+			tCoords = append(tCoords, tileCords[currentTile]...)
 
-			if h < hTiles-1 && v < vTiles-1 {
-				//Right [0]
-				if possibilities[h+1][v][0] == -1 {
-					possibilities[h+1][v] = adjacencyList[WangTilesMatrix[h][v]][0]
-				} else {
-					possibilities[h+1][v] = andArray(possibilities[h+1][v], adjacencyList[WangTilesMatrix[h][v]][0])
-				}
+			if (h < hTiles-1 && v < vTiles-1) || (h == hTiles-1 && v < vTiles-1) {
 				//Bottom [1]
-				if possibilities[h][v+1][0] == -1 {
-					possibilities[h][v+1] = adjacencyList[WangTilesMatrix[h][v]][1]
+				if len(possibilities[h][v+1]) == 0 {
+					possibilities[h][v+1] = adjacencyList[currentTile][1]
 				} else {
-					possibilities[h][v+1] = andArray(possibilities[h+1][v], adjacencyList[WangTilesMatrix[h][v]][1])
-				}
-			} else if h == hTiles-1 && v < vTiles-1 {
-				//Bottom [1]
-				if possibilities[h][v+1][0] == -1 {
-					possibilities[h][v+1] = adjacencyList[WangTilesMatrix[h][v]][1]
-				} else {
-					possibilities[h][v+1] = andArray(possibilities[h+1][v], adjacencyList[WangTilesMatrix[h][v]][1])
-				}
-			} else if v == vTiles-1 && h < hTiles-1 {
-				//Right [0]
-				if possibilities[h+1][v][0] == -1 {
-					possibilities[h+1][v] = adjacencyList[WangTilesMatrix[h][v]][0]
-				} else {
-					possibilities[h+1][v] = andArray(possibilities[h+1][v], adjacencyList[WangTilesMatrix[h][v]][0])
+					possibilities[h][v+1] = andArray(possibilities[h+1][v], adjacencyList[currentTile][1])
 				}
 			}
-
-			tCoords = append(tCoords, tileCords[WangTilesMatrix[h][v]]...)
+			if (h < hTiles-1 && v < vTiles-1) || (v == vTiles-1 && h < hTiles-1) {
+				//Right [0]
+				if len(possibilities[h+1][v]) == 0 {
+					possibilities[h+1][v] = adjacencyList[currentTile][0]
+				} else {
+					possibilities[h+1][v] = andArray(possibilities[h+1][v], adjacencyList[currentTile][0])
+				}
+			}
 		}
 	}
 	return
