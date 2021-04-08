@@ -141,6 +141,7 @@ func programLoop(window *win.Window) error {
 	viewSourceUniformLocation := sourceProgram.GetUniformLocation("view")
 	projectSourceUniformLocation := sourceProgram.GetUniformLocation("projection")
 	objectColorSourceUniformLocation := sourceProgram.GetUniformLocation("objectColor")
+	textureSourceUniformLocation := sourceProgram.GetUniformLocation("texSampler")
 
 	pointLightsUniformLocations := pointLightsUniformLocations(program)
 
@@ -162,9 +163,15 @@ func programLoop(window *win.Window) error {
 		panic(err.Error())
 	}
 
+	starsTexture, err := gfx.NewTextureFromFile("textures/stars.jpg",
+		gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	// Colors
 	objectColor := mgl32.Vec3{1., 0., 1.}
-	backgroundColor := mgl32.Vec3{0., 0., 0.}
+	backgroundColor := mgl32.Vec3{0, 0, 0}
 	lightColor := mgl32.Vec3{1, 1, 0.7}
 
 	// Uncomment to turn on polygon mode
@@ -175,6 +182,7 @@ func programLoop(window *win.Window) error {
 	ySegments := 30
 	VAO := createVAO(Sphere(xSegments, ySegments))
 	lightVAO := VAO
+	skyVAO := createVAO(Cube(10, 10, 10))
 
 	// Scene and animation always needs to be after the model and buffers initialization
 	animationCtl := gfx.NewAnimationManager()
@@ -223,8 +231,7 @@ func programLoop(window *win.Window) error {
 		earthTexture.Bind(gl.TEXTURE0)
 		earthTexture.SetUniform(textureUniformLocation)
 
-		boxModel := model
-		boxModel = boxModel.Mul4(mgl32.HomogRotate3DY(float32(animationCtl.GetAngle())))
+		boxModel := model.Mul4(mgl32.HomogRotate3DY(float32(animationCtl.GetAngle())))
 
 		gl.UniformMatrix4fv(modelUniformLocation, 1, false, &boxModel[0])
 		gl.DrawElements(gl.TRIANGLES, int32(xSegments*ySegments)*6, gl.UNSIGNED_INT, unsafe.Pointer(nil))
@@ -242,8 +249,16 @@ func programLoop(window *win.Window) error {
 			cubeM = cubeM.Mul4(mgl32.Translate3D(lp.Elem())).Mul4(mgl32.Scale3D(0.2, 0.2, 0.2))
 			gl.UniformMatrix4fv(modelSourceUniformLocation, 1, false, &cubeM[0])
 			gl.DrawElements(gl.TRIANGLES, int32(xSegments*ySegments)*6, gl.UNSIGNED_INT, unsafe.Pointer(nil))
-
 		}
+		//gl.BindVertexArray(0)
+
+		gl.BindVertexArray(skyVAO)
+		starsTexture.Bind(gl.TEXTURE0)
+		starsTexture.SetUniform(textureSourceUniformLocation)
+
+		gl.UniformMatrix4fv(modelSourceUniformLocation, 1, false, &model[0])
+		gl.DrawElements(gl.TRIANGLES, 6*6, gl.UNSIGNED_INT, unsafe.Pointer(nil))
+		starsTexture.UnBind()
 		gl.BindVertexArray(0)
 	}
 
