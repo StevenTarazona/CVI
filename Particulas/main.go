@@ -23,11 +23,13 @@ const (
 
 var (
 	lightPositions = []mgl32.Vec3{
-		{0, .5, 3},
-		{0, .5, 0},
+		{0, 1, 3},
+		{0, 1, 3},
+		{0, 1, 0},
 	}
 	lightColors = []mgl32.Vec3{
 		{1, 0, 1},
+		{0, 1, 1},
 		{1, 1, 0.7},
 	}
 )
@@ -87,7 +89,7 @@ func createParticleVAO(points []float32) (uint32, uint32) {
 	gl.BufferData(gl.ARRAY_BUFFER, len(points)*4, gl.Ptr(points), gl.STATIC_DRAW)
 
 	// size of one whole vertex (sum of attrib sizes)
-	var stride int32 = 3*4 + 4*4
+	var stride int32 = 3*4 + 4*4 + 4
 	var offset int = 0
 
 	gl.EnableVertexAttribArray(0)
@@ -95,6 +97,9 @@ func createParticleVAO(points []float32) (uint32, uint32) {
 	gl.EnableVertexAttribArray(1)
 	offset += 3 * 4
 	gl.VertexAttribPointer(1, 4, gl.FLOAT, false, stride, gl.PtrOffset(offset))
+	gl.EnableVertexAttribArray(2)
+	offset += 4 * 4
+	gl.VertexAttribPointer(2, 1, gl.FLOAT, false, stride, gl.PtrOffset(offset))
 	gl.BindVertexArray(0)
 
 	return VAO, VBO
@@ -173,8 +178,8 @@ func programLoop(window *win.Window) error {
 	// Ensure that triangles that are "behind" others do not draw over top of them
 	gl.Enable(gl.DEPTH_TEST)
 	gl.DepthFunc(gl.LESS)
-	gl.Enable(gl.BLEND)
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE)
+	//gl.BlendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
 
 	// Base model
 	model := mgl32.Ident4()
@@ -186,7 +191,7 @@ func programLoop(window *win.Window) error {
 	objectColorUL := program.GetUniformLocation("objectColor")
 	viewPosUL := program.GetUniformLocation("viewPos")
 	numLightsUL := program.GetUniformLocation("numLights")
-	//texture0UL := program.GetUniformLocation("texSampler0")
+	texture0UL := program.GetUniformLocation("texSampler0")
 	//texture1UL := program.GetUniformLocation("texSampler1")
 	pointLightsUL := pointLightsUL(program)
 
@@ -199,7 +204,6 @@ func programLoop(window *win.Window) error {
 	particlesModelUL := particlesProgram.GetUniformLocation("model")
 	particlesViewUL := particlesProgram.GetUniformLocation("view")
 	particlesProjectUL := particlesProgram.GetUniformLocation("projection")
-	particlesSizeUL := particlesProgram.GetUniformLocation("particle_size")
 	particlesTextureUL := particlesProgram.GetUniformLocation("tex0")
 
 	// creates camara
@@ -217,43 +221,55 @@ func programLoop(window *win.Window) error {
 	if err != nil {
 		panic(err.Error())
 	}
+	planTexture, err := gfx.NewTextureFromFile("textures/floor.jpg",
+		gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE)
+	if err != nil {
+		panic(err.Error())
+	}
 
 	// Settings
 	backgroundColor := mgl32.Vec3{0, 0, 0}
 	objectColor := mgl32.Vec3{1.0, 1.0, 1.0}
 	polygonMode := false
 
-	particle_size := 0.3
+	particle_size := float32(0.3)
 	numParticles := 95
-	particlesColor := &lightColors[0]
-	particlesPos := &lightPositions[0]
-	particlesVel := mgl32.Vec3{1, 0, 0}
+	particlesColor1 := &lightColors[0]
+	particlesColor2 := &lightColors[1]
+	particlesPos1 := &lightPositions[0]
+	particlesPos2 := &lightPositions[1]
+	particlesVel1 := mgl32.Vec3{0, 0, 0}
+	particlesVel2 := mgl32.Vec3{0, 0, 0}
 	particlesMinLife := float32(0.5)
 	particlesMaxLife := float32(3)
-	particlesAmplitude := float32(.5)
+	particlesAmplitude := mgl32.Vec3{.5, .5, .5}
 
-	particles := NewParticles(numParticles, *particlesColor, *particlesPos, particlesVel, particlesMinLife, particlesMaxLife, particlesAmplitude)
+	particles1 := NewParticles(numParticles, *particlesColor1, *particlesPos1, particlesVel1, particlesAmplitude, particlesMinLife, particlesMaxLife, particle_size)
+	particles2 := NewParticles(numParticles, *particlesColor2, *particlesPos2, particlesVel2, particlesAmplitude, particlesMinLife, particlesMaxLife, particle_size)
 
 	if polygonMode {
 		gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
 	}
 
 	// Geometry
-	particleVAO, particleVBO := createParticleVAO(particles.points)
+	particle1VAO, particle1VBO := createParticleVAO(particles1.points)
+	particle2VAO, particle2VBO := createParticleVAO(particles2.points)
 
 	xLightSegments, yLighteSegments := 30, 30
 	lightVAO := createVAO(Sphere(xLightSegments, yLighteSegments))
 
-	xPlaneSegments, yPlaneSegments := 15, 15
-	planeVAO := createVAO(Square(xPlaneSegments, yPlaneSegments, 1))
+	xPlanSegments, yPlanSegments := 15, 15
+	planVAO := createVAO(Square(xPlanSegments, yPlanSegments, 1))
 
 	// Scene and animation always needs to be after the model and buffers initialization
 	animationCtl := gfx.NewAnimationManager()
 	animationCtl.AddContunuousAnimation(func() {
 		r := float32(3)
-		*particlesPos = mgl32.Vec3{r * math32.Cos(float32(animationCtl.GetAngle())), particlesPos.Y(), r * math32.Sin(float32(animationCtl.GetAngle()))}
-		particlesVel = mgl32.Vec3{r * -math32.Sin(float32(animationCtl.GetAngle())), particlesPos.Y(), 0 * math32.Cos(float32(animationCtl.GetAngle()))}.Normalize()
+		*particlesPos1 = mgl32.Vec3{r * math32.Cos(float32(animationCtl.GetAngle())), particlesPos1.Y(), r * math32.Sin(float32(animationCtl.GetAngle()))}
+		particlesVel1 = mgl32.Vec3{r * -math32.Sin(float32(animationCtl.GetAngle())), 0, r * math32.Cos(float32(animationCtl.GetAngle()))}.Normalize()
 
+		*particlesPos2 = mgl32.Vec3{-r * math32.Cos(float32(animationCtl.GetAngle())), particlesPos2.Y(), -r * math32.Sin(float32(animationCtl.GetAngle()))}
+		particlesVel2 = mgl32.Vec3{-r * -math32.Sin(float32(animationCtl.GetAngle())), 0, -r * math32.Cos(float32(animationCtl.GetAngle()))}.Normalize()
 	})
 	animationCtl.Init() // always needs to be before the main loop in order to get correct times
 
@@ -267,7 +283,8 @@ func programLoop(window *win.Window) error {
 
 		// Scene update
 		animationCtl.Update()
-		particles.Update(float32(animationCtl.GetElapsed()), *particlesPos, particlesVel)
+		particles1.Update(float32(animationCtl.GetElapsed()), *particlesPos1, particlesVel1)
+		particles2.Update(float32(animationCtl.GetElapsed()), *particlesPos2, particlesVel2)
 
 		// You shall draw here
 		program.Use()
@@ -293,10 +310,13 @@ func programLoop(window *win.Window) error {
 
 		// render models
 
-		//Plane
-		gl.BindVertexArray(planeVAO)
+		//Plan
+		gl.BindVertexArray(planVAO)
+		planTexture.Bind(gl.TEXTURE0)
+		planTexture.SetUniform(texture0UL)
 		gl.UniformMatrix4fv(modelUL, 1, false, &model[0])
-		gl.DrawElements(gl.TRIANGLES, int32(xPlaneSegments*yPlaneSegments)*6, gl.UNSIGNED_INT, unsafe.Pointer(nil))
+		gl.DrawElements(gl.TRIANGLES, int32(xPlanSegments*yPlanSegments)*6, gl.UNSIGNED_INT, unsafe.Pointer(nil))
+		planTexture.UnBind()
 		gl.BindVertexArray(0)
 
 		//Source program
@@ -308,7 +328,7 @@ func programLoop(window *win.Window) error {
 		gl.BindVertexArray(lightVAO)
 		for i, lp := range lightPositions {
 			lightTransform := model
-			if i > 0 {
+			if i > 1 {
 				lightTransform = model.Mul4(mgl32.Translate3D(lp.Elem())).Mul4(mgl32.Scale3D(0.2, 0.2, 0.2))
 			} else {
 				lightTransform = model.Mul4(mgl32.Translate3D(lp.Elem())).Mul4(mgl32.Scale3D(0.05, 0.05, 0.05))
@@ -325,18 +345,26 @@ func programLoop(window *win.Window) error {
 		gl.UniformMatrix4fv(particlesViewUL, 1, false, &camera[0])
 		gl.UniformMatrix4fv(particlesModelUL, 1, false, &model[0])
 
-		gl.BindVertexArray(particleVAO)
-		gl.BindBuffer(gl.ARRAY_BUFFER, particleVBO)
-		gl.BufferData(gl.ARRAY_BUFFER, len(particles.points)*4, gl.Ptr(particles.points), gl.STATIC_DRAW)
-
-		gl.Uniform1f(particlesSizeUL, float32(particle_size))
 		particlTexture.Bind(gl.TEXTURE0)
 		particlTexture.SetUniform(particlesTextureUL)
-		gl.Disable(gl.DEPTH_TEST)
+		gl.DepthMask(false)
+		gl.Enable(gl.BLEND)
+
+		gl.BindVertexArray(particle1VAO)
+		gl.BindBuffer(gl.ARRAY_BUFFER, particle1VBO)
+		gl.BufferData(gl.ARRAY_BUFFER, len(particles1.points)*4, gl.Ptr(particles1.points), gl.STATIC_DRAW)
 		gl.DrawArrays(gl.POINTS, 0, int32(numParticles))
-		gl.Enable(gl.DEPTH_TEST)
-		particlTexture.UnBind()
 		gl.BindVertexArray(0)
+
+		gl.BindVertexArray(particle2VAO)
+		gl.BindBuffer(gl.ARRAY_BUFFER, particle2VBO)
+		gl.BufferData(gl.ARRAY_BUFFER, len(particles2.points)*4, gl.Ptr(particles2.points), gl.STATIC_DRAW)
+		gl.DrawArrays(gl.POINTS, 0, int32(numParticles))
+		gl.BindVertexArray(0)
+
+		gl.DepthMask(true)
+		gl.Disable(gl.BLEND)
+		particlTexture.UnBind()
 	}
 
 	return nil
